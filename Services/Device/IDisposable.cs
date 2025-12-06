@@ -11,13 +11,12 @@ namespace WPF9SimpleMesMonitorSystem.Services.Device
         /// <summary>
         /// 连接设备 (自动识别 TCP 或 RTU)
         /// </summary>
-        /// <returns></returns>
+        /// <returns>返回连接是否成功</returns>
         Task<bool> ConnectAsync();
 
         /// <summary>
         /// 读取数据核心逻辑
         /// </summary>
-        /// <returns></returns>
         Task ReadDataAsync();
 
         /// <summary>
