@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+
 namespace WPF9SimpleMesMonitorSystem.Services.Device
 {
     public class DeviceDataEventArgs:EventArgs
