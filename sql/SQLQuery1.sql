@@ -18,6 +18,7 @@ BEGIN
 		IpAddress nvarchar(20) NULL, --设备IP (Modbus TCP)
 		Port int DEFAULT 502 NULL, --端口
 		SerialPort nvarchar(50) NULL, --串口名
+        SlaveId tinyint NOT NULL DEFAULT 1, --从站ID
 		Status nvarchar(20) DEFAULT 'Stopped', --状态: Running/Stopped/Fault
 		LastUpdateTime datetime DEFAULT GETDATE() --最后通信时间
 		);

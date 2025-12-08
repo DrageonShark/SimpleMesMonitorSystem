@@ -11,20 +11,21 @@ GO
 
 -- 2. 创建设备表 (Devices)
 -- 存储生产线上的设备基础信息及当前状态
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Devices]') AND type in (N'U'))
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[T_Devices]') AND type in (N'U'))
 BEGIN
-    CREATE TABLE [dbo].[Devices](
+    CREATE TABLE [dbo].[T_Devices](
         [DeviceId] [int] IDENTITY(1,1) NOT NULL PRIMARY KEY, -- 设备ID
         [DeviceName] [nvarchar](50) NOT NULL,                -- 设备名称
         [IpAddress] [nvarchar](20) NULL,                     -- IP地址 (Modbus TCP)
         [Port] [int] DEFAULT 502,                            -- 端口
+        [SlaveId] [tinyint] NOT NULL DEFAULT 1,                  -- 从站地址
         [Status] [nvarchar](20) DEFAULT 'Stopped',           -- 状态: Running/Stopped/Fault
         [LastUpdateTime] [datetime] DEFAULT GETDATE()        -- 最后通信时间
     );
     
 
     -- 插入模拟数据 (3台设备)
-    INSERT INTO Devices (DeviceName, IpAddress, Status) VALUES 
+    INSERT INTO T_Devices (DeviceName, IpAddress, Status) VALUES 
     ('注塑机-A01', '127.0.0.1', 'Stopped'),
     ('冲压机-B02', '127.0.0.1', 'Stopped'),
     ('包装机-C03', '127.0.0.1', 'Stopped');
@@ -34,9 +35,9 @@ GO
 
 -- 3. 创建生产订单表 (ProductionOrders)
 -- 管理生产任务，包含计划数和完成数
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ProductionOrders]') AND type in (N'U'))
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[T_ProductionOrders]') AND type in (N'U'))
 BEGIN
-    CREATE TABLE [dbo].[ProductionOrders](
+    CREATE TABLE [dbo].[T_ProductionOrders](
         [OrderNo] [nvarchar](50) NOT NULL PRIMARY KEY,       -- 订单号
         [ProductModel] [nvarchar](50) NOT NULL,              -- 产品型号
         [PlanQty] [int] NOT NULL,                            -- 计划数量
@@ -57,9 +58,9 @@ GO
 
 -- 4. 创建生产过程记录表 (ProductionRecords)
 -- 用于生成历史趋势图，记录核心参数
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ProductionRecords]') AND type in (N'U'))
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[T_ProductionRecords]') AND type in (N'U'))
 BEGIN
-    CREATE TABLE [dbo].[ProductionRecords](
+    CREATE TABLE [dbo].[T_ProductionRecords](
         [RecordId] [bigint] IDENTITY(1,1) NOT NULL PRIMARY KEY,
         [DeviceId] [int] NOT NULL,                           -- 关联设备ID
         [Temperature] [decimal](10, 2) NULL,                 -- 温度

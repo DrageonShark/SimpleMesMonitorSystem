@@ -19,6 +19,11 @@ namespace WPF9SimpleMesMonitorSystem.Services.Device
         private SerialPort _serialPort;
         private bool _isConnected = false;
 
+        public ModbusDeviceWrapper(Models.Device device)
+        {
+            DeviceInfo = device;
+        }
+
         /// <summary>
         /// 连接设备 (自动识别 TCP 或 RTU)
         /// </summary>
@@ -63,9 +68,7 @@ namespace WPF9SimpleMesMonitorSystem.Services.Device
                     throw new Exception("设备未配置IP或串口号");
                 }
                 // 简单的连接测试：尝试读取保持寄存器地址 0 的 1 个数据
-                // 这里的 SlaveId 默认设为 1，Modbus Slave 模拟时要注意匹配
-                byte slaveId = 1;
-                await _master.ReadHoldingRegistersAsync(slaveId, 0, 1);
+                await _master.ReadHoldingRegistersAsync(DeviceInfo.SlaveId, 0, 1);
                 _isConnected = true;
                 DeviceInfo.Status = "Running"; // 连接成功暂且认为在运行
                 return true;
@@ -94,14 +97,13 @@ namespace WPF9SimpleMesMonitorSystem.Services.Device
 
             try
             {
-                byte slaveId = 1;
                 // --- 读取模拟数据 ---
                 // 假设 Modbus 地址映射如下 (与 Modbus Slave 设置对应):
                 // 40001 (地址0): 状态 (1=Running, 0=Stopped, 2=Fault)
                 // 40002 (地址1): 温度 (放大10倍传输，如 255 代表 25.5度)
                 // 40003 (地址2): 压力 (放大10倍)
                 // 40004 (地址3): 转速
-                ushort[] data = await _master.ReadHoldingRegistersAsync(slaveId, 0, 4);
+                ushort[] data = await _master.ReadHoldingRegistersAsync(DeviceInfo.SlaveId, 0, 4);
 
                 // 解析数据
                 ushort statusVal = data[0];
