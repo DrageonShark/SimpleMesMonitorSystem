@@ -66,7 +66,6 @@ namespace WPF9SimpleMesMonitorSystem.Services.Device
                 // 这里的 SlaveId 默认设为 1，Modbus Slave 模拟时要注意匹配
                 byte slaveId = 1;
                 await _master.ReadHoldingRegistersAsync(slaveId, 0, 1);
-
                 _isConnected = true;
                 DeviceInfo.Status = "Running"; // 连接成功暂且认为在运行
                 return true;
