@@ -24,7 +24,7 @@ namespace WPF9SimpleMesMonitorSystem.Services.DAL
         /// <param name="sql"></param>
         /// <param name="param"></param>
         /// <returns></returns>
-        Task<T> QueryFirstOrDefaultAsync<T>(string sql, object param = null);
+        Task<T?> QueryFirstOrDefaultAsync<T>(string sql, object param = null);
 
         /// <summary>
         /// 异步执行增删改后返回影响的行数
@@ -41,6 +41,6 @@ namespace WPF9SimpleMesMonitorSystem.Services.DAL
         /// <param name="sql"></param>
         /// <param name="param"></param>
         /// <returns></returns>
-        Task<T> ExecuteScalarAsync<T>(string sql, object param = null);
+        Task<T?> ExecuteScalarAsync<T>(string sql, object param = null);
     }
 }

@@ -35,7 +35,7 @@ namespace WPF9SimpleMesMonitorSystem.Services.DAL
             }
         }
 
-        public async Task<T> QueryFirstOrDefaultAsync<T>(string sql, object param = null)
+        public async Task<T?> QueryFirstOrDefaultAsync<T>(string sql, object param = null)
         {
             using (var conn = CreateConnection())
             {
@@ -51,7 +51,7 @@ namespace WPF9SimpleMesMonitorSystem.Services.DAL
             }
         }
 
-        public async Task<T> ExecuteScalarAsync<T>(string sql, object param = null)
+        public async Task<T?> ExecuteScalarAsync<T>(string sql, object param = null)
         {
             using (var conn = CreateConnection())
             {
