@@ -5,8 +5,31 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WPF9SimpleMesMonitorSystem"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
-
-    </Grid>
+        Title="简易MES管理系统" Height="600" Width="1100">
+    <DockPanel>
+        <!-- 顶部系统状态栏 ,Grid 实现 SpaceBetween效果-->
+        <Border DockPanel.Dock="Top" Background="#1F2933" Padding="12">
+            <!-- Grid 实现“左元素贴左、右元素贴右”（等效 SpaceBetween） -->
+            <Grid>
+                <!-- 左：Simple MES -->
+                <TextBlock HorizontalAlignment="Left" Text="Simple MES" Foreground="White" FontSize="18" FontWeight="Bold"/>
+                <!-- 右：当前时间 -->
+                <TextBlock HorizontalAlignment="Right" Text="{Binding CurrentTime}" Foreground="White" FontSize="14"/>
+            </Grid>
+        </Border>
+        <!-- 左侧导航：解决 Padding/Spacing 问题 -->
+        <!-- 用 Border 包裹 StackPanel，通过 Border 的 Padding 模拟 StackPanel 的 Padding -->
+        <Border DockPanel.Dock="Left" Width="200" Background="#f3f4f6" Padding="16">
+            <StackPanel>
+                <!-- 用 Margin 替代 Spacing：每个按钮下方加 8px 间距 -->
+                <Button Content="仪表盘" Command="{Binding NavigateCommand}" CommandParameter="Dashboard" Margin="0 0 0 8"/>
+                <Button Content="设备监控" Command="{Binding NavigateCommand}" CommandParameter="DeviceMonitor" Margin="0 0 0 8"/>
+                <Button Content="订单管理" Command="{Binding NavigateCommand}" CommandParameter="Order" Margin="0 0 0 8"/>
+            </StackPanel>
+        </Border>
+        <!-- 主内容区域：保持不变 -->
+        <Border Background="White" Padding="16">
+            <ContentControl Content="{Binding CurrentView}"/>
+        </Border>
+    </DockPanel>
 </Window>
