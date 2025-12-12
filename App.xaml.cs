@@ -50,7 +50,6 @@ namespace WPF9SimpleMesMonitorSystem
             //——设备通信层（单例：统一管理所有Modbus设备）——
             services.AddSingleton<DeviceManager>();
             //——ViewModel注册——
-            services.AddSingleton<MainWindow>();
             services.AddTransient<DashboardViewModel>();
             services.AddTransient<DeviceMonitorViewModel>();
             services.AddTransient<OrderViewModel>();

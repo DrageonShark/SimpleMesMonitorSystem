@@ -7,21 +7,25 @@ using System.Text;
 using System.Threading.Tasks;
 using NModbus;
 using NModbus.IO;
+using WPF9SimpleMesMonitorSystem.Common.Telemetry;
 
 namespace WPF9SimpleMesMonitorSystem.Services.Device
 {
+    /// <summary>
+    /// 单个设备的通信包装器，负责 Modbus 连接与读取，并生成统一的快照。
+    /// </summary>
     public class ModbusDeviceWrapper:IDisposable
     {
         public Models.Device DeviceInfo { get; private set; }
 
-        private IModbusMaster _master;
-        private TcpClient _tcpClient;
-        private SerialPort _serialPort;
+        private IModbusMaster? _master;
+        private TcpClient? _tcpClient;
+        private SerialPort? _serialPort;
         private bool _isConnected = false;
 
         public ModbusDeviceWrapper(Models.Device device)
         {
-            DeviceInfo = device;
+            DeviceInfo = device ?? throw new ArgumentNullException(nameof(device));
         }
 
         /// <summary>
@@ -33,18 +37,17 @@ namespace WPF9SimpleMesMonitorSystem.Services.Device
             try
             {
                 //首先断开连接
-                Dispose();
+                DisposeConnections();
 
                 var factory = new ModbusFactory();
-                if (!string.IsNullOrEmpty(DeviceInfo.IpAddress))
+                if (!string.IsNullOrWhiteSpace(DeviceInfo.IpAddress))
                 {
                     //Modbus TCP
                     _tcpClient = new TcpClient();
-                    //设置超时，防止网络不通卡死
-                    await _tcpClient.ConnectAsync(DeviceInfo.IpAddress, DeviceInfo.Port ?? 502);
+                    await _tcpClient.ConnectAsync(DeviceInfo.IpAddress, DeviceInfo.Port ?? 502).ConfigureAwait(false);
                     _master = factory.CreateMaster(_tcpClient);
                 }
-                else if (!string.IsNullOrEmpty(DeviceInfo.SerialPort))
+                else if (!string.IsNullOrWhiteSpace(DeviceInfo.SerialPort))
                 {
                     // Modbus RTU
                     _serialPort = new SerialPort(DeviceInfo.SerialPort)
@@ -58,7 +61,6 @@ namespace WPF9SimpleMesMonitorSystem.Services.Device
                     //创建RTU Master
                     var streamResource = new SerialPortAdapter(_serialPort);
                     _master = factory.CreateRtuMaster(streamResource);
-
                     //设置读取超时时间
                     _master.Transport.ReadTimeout = 2000;
                     _master.Transport.WriteTimeout = 2000;
@@ -68,7 +70,7 @@ namespace WPF9SimpleMesMonitorSystem.Services.Device
                     throw new Exception("设备未配置IP或串口号");
                 }
                 // 简单的连接测试：尝试读取保持寄存器地址 0 的 1 个数据
-                await _master.ReadHoldingRegistersAsync(DeviceInfo.SlaveId, 0, 1);
+                await _master.ReadHoldingRegistersAsync(DeviceInfo.SlaveId, 0, 1).ConfigureAwait(false);
                 _isConnected = true;
                 DeviceInfo.Status = "Running"; // 连接成功暂且认为在运行
                 return true;
@@ -76,23 +78,23 @@ namespace WPF9SimpleMesMonitorSystem.Services.Device
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"连接失败[{DeviceInfo.DeviceName}]:{ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[{DeviceInfo.DeviceName}]连接失败：{ex.Message}");
                 _isConnected = false;
                 DeviceInfo.Status = "Fault";//连接不上视为故障
+                DeviceInfo.LastUpdateTime = DateTime.Now;
                 return false;
             }
         }
 
         /// <summary>
-        /// 读取数据核心逻辑
+        /// 读取一次实时数据并转换为快照；若失败则返回故障快照。
         /// </summary>
-        public async Task ReadDataAsync()
+        public async Task<DeviceTelemetrySnapshot?> ReadDataAsync()
         {
             if (!_isConnected)
             {
-                bool success = await ConnectAsync();
-                if(!success)
-                    return;
+                var success = await ConnectAsync().ConfigureAwait(false);
+                return BuildFaultSnapshot();
             }
 
             try
@@ -103,44 +105,64 @@ namespace WPF9SimpleMesMonitorSystem.Services.Device
                 // 40002 (地址1): 温度 (放大10倍传输，如 255 代表 25.5度)
                 // 40003 (地址2): 压力 (放大10倍)
                 // 40004 (地址3): 转速
-                ushort[] data = await _master.ReadHoldingRegistersAsync(DeviceInfo.SlaveId, 0, 4);
+                // 40001 状态、40002 温度(×10)、40003 压力(×10)、40004 转速
+                var data = await _master!.ReadHoldingRegistersAsync(DeviceInfo.SlaveId, 0, 4).ConfigureAwait(false);
 
                 // 解析数据
-                ushort statusVal = data[0];
-                ushort tempRaw = data[1];
-                ushort pressRaw = data[2];
-                ushort speedRaw = data[3];
-
-                DeviceInfo.Status = statusVal switch
+                var status = data[0] switch
                 {
                     1 => "Running",
                     2 => "Fault",
                     _ => "Stopped"
                 };
 
-                // 模拟通过 ProductionRecords 表关联的实时数据
-                // 注意：这里暂时把实时数据挂在 DeviceInfo 的 Tag 上或者通过事件传出去
-                // 实际项目中，Device Model 可能需要增加 Temperature 属性，或者单独传值
-                // 这里为了演示，直接更新 DeviceInfo 的最后更新时间
-                DeviceInfo.LastUpdateTime = DateTime.Now;
+                var temperature = data[1] / 10d;
+                var pressure = data[2] / 10d;
+                var speed = data[3];
+                var now = DateTime.Now;
 
-                // 为了传出实时数据，我们可以暂时封装一个对象，或者扩展 Device 类
+                DeviceInfo.Status = status;
+                DeviceInfo.LastUpdateTime = now;
+
+                return new DeviceTelemetrySnapshot(DeviceInfo.DeviceId, DeviceInfo.DeviceName, status, temperature,
+                    pressure, speed, now);
             }
             catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[]{DeviceInfo.DeviceName}读取失败：{ex.Message}");
                 _isConnected = false;
                 DeviceInfo.Status = "Fault";
+                DeviceInfo.LastUpdateTime = DateTime.Now;
+                return BuildFaultSnapshot();
             }
         }
+
+        private DeviceTelemetrySnapshot BuildFaultSnapshot()
+        {
+            var now = DateTime.Now;
+            return new DeviceTelemetrySnapshot(DeviceInfo.DeviceId, DeviceInfo.DeviceName, 
+                string.IsNullOrWhiteSpace(DeviceInfo.Status) ? "Fault" : DeviceInfo.Status,
+                0, 0, 0, now);
+        }
+
 
         /// <summary>
         /// 关闭连接
         /// </summary>
-        public void Dispose()
+        public void DisposeConnections()
         {
             _tcpClient?.Close();
             _serialPort?.Close();
             _master?.Dispose();
+            _tcpClient = null;
+            _serialPort = null;
+            _serialPort = null;
+            _isConnected = false;
+        }
+
+        public void Dispose()
+        {
+            DisposeConnections();
             _isConnected = false;
         }
     }
