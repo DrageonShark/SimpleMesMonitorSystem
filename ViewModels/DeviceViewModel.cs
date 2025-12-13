@@ -1,11 +1,12 @@
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
+using WPF9SimpleMesMonitorSystem.Common.Telemetry;
 using WPF9SimpleMesMonitorSystem.Models;
 
 namespace WPF9SimpleMesMonitorSystem.ViewModels
 {
     /// <summary>
-    /// UI 层可观察实体，封装设备基础信息和实时状态。
+    /// UI 层可观察实体，封装设备基础信息，把实时快照映射为可绑定属性。
     /// </summary>
     public partial class DeviceViewModel : ViewModelBase
     {
@@ -14,6 +15,7 @@ namespace WPF9SimpleMesMonitorSystem.ViewModels
         public DeviceViewModel(Device model)
         {
             Model = model ?? throw new ArgumentNullException(nameof(model));
+            PageTitle = model.DeviceName;
             _status = model.Status;
             _lastUpdateTime = model.LastUpdateTime;
         }
@@ -27,16 +29,13 @@ namespace WPF9SimpleMesMonitorSystem.ViewModels
 
         [ObservableProperty]
         private double _currentTemperature;
-
         [ObservableProperty]
         private double _currentPressure;
-
+        [ObservableProperty] private int _currentSpeed;
         [ObservableProperty]
         private int _currentCount;
-
         [ObservableProperty]
         private string _status;
-
         [ObservableProperty]
         private DateTime _lastUpdateTime;
 
@@ -50,13 +49,20 @@ namespace WPF9SimpleMesMonitorSystem.ViewModels
         }
 
         /// <summary>
-        /// 提供一个入口刷新实时量测参数，供设备轮询结果调用。
+        /// 根据实时快照刷新 UI，并把关键字段写回 Model，方便后续持久化。
         /// </summary>
-        public void ApplyRealtimeSnapshot(double temperature, double pressure, int count)
+        public void ApplyTelemetry(DeviceTelemetrySnapshot snapshot)
         {
-            CurrentTemperature = temperature;
-            CurrentPressure = pressure;
-            CurrentCount = count;
+            if(snapshot == null) 
+                throw new ArgumentNullException(nameof(snapshot));
+            Model.Status = snapshot.Status;
+            Model.LastUpdateTime = snapshot.LastUpdateTime;
+
+            Status = snapshot.Status;
+            LastUpdateTime = snapshot.LastUpdateTime;
+            CurrentTemperature = snapshot.Temperature;
+            CurrentPressure = snapshot.Pressure;
+            CurrentSpeed = snapshot.Speed;
         }
     }
 }

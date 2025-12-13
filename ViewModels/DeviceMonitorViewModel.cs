@@ -1,63 +1,102 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
+using WPF9SimpleMesMonitorSystem.Common.Telemetry;
 using WPF9SimpleMesMonitorSystem.Models;
+using WPF9SimpleMesMonitorSystem.Services.DAL;
+using WPF9SimpleMesMonitorSystem.Services.Device;
 
 namespace WPF9SimpleMesMonitorSystem.ViewModels
 {
-    public partial class DeviceMonitorViewModel: ViewModelBase
+    /// <summary>
+    /// 设备监控页面 ViewModel：负责加载设备列表并订阅实时快照。
+    /// </summary>
+    public partial class DeviceMonitorViewModel: ViewModelBase,IDeviceTelemetryObserver
     {
+        private readonly DeviceManager _deviceManager;
+        private readonly IDbService _dbService;
+
         //界面设备绑定
-        public ObservableCollection<DeviceViewModel> Devices { get; } = new ObservableCollection<DeviceViewModel>();
+        public ObservableCollection<DeviceViewModel> Devices { get; } = new ();
 
-        public DeviceMonitorViewModel()
+        public DeviceMonitorViewModel(DeviceManager deviceManager, IDbService dbService)
         {
+            PageTitle = "设备监控";
+            _deviceManager = deviceManager ?? throw new ArgumentNullException(nameof(deviceManager));
+            _dbService = dbService ?? throw new ArgumentNullException(nameof(dbService));
             
+            _deviceManager.Subscribe(this);
+            _ = InitializeAsync();
         }
-        
-        private async void LoadDevices()
-        {
-            //数据库加载设备列表
 
+        private static Task RunOnUiThreadAsync(Action action)
+        {
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher == null || dispatcher.CheckAccess())
+            {
+                action();
+                return Task.CompletedTask;
+            }
+
+            return dispatcher.InvokeAsync(action).Task;
+        }
+
+        public void OnTelemetryReceived(DeviceTelemetrySnapshot snapshot)
+        {
+            if(snapshot == null)
+                return;
+            _ = RunOnUiThreadAsync(() =>
+            {
+                var vm = Devices.FirstOrDefault(d => d.DeviceId == snapshot.DeviceId);
+                if (vm == null)
+                {
+                    var model = new Device()
+                    {
+                        DeviceId = snapshot.DeviceId,
+                        DeviceName = snapshot.DeviceName,
+                        Status = snapshot.Status,
+                        LastUpdateTime = snapshot.LastUpdateTime
+                    };
+                    vm = new DeviceViewModel(model);
+                    Devices.Add(vm);
+                }
+
+                vm.ApplyTelemetry(snapshot);
+            });
         }
 
         /// <summary>
         /// 根据数据库加载的实体创建或刷新 ViewModel 集合。
         /// </summary>
-        public void ApplyDeviceSnapshot(IEnumerable<Device> devices)
+        private async Task LoadDevicesAsync()
         {
-            if (devices == null)
-                return;
+            //数据库加载设备列表
+            const string sql =
+                @"SELECT DeviceId, DeviceName, IpAddress, Port, SerialPort, SlaveId, Status, LastUpdateTime
+                                 FROM dbo.T_Devices ORDER BY DeviceId";
+            var devices = await _dbService.QueryAsync<Device>(sql).ConfigureAwait(false);
 
-            foreach (var device in devices)
+            await RunOnUiThreadAsync(() =>
             {
-                UpdateDevice(device);
-            }
+                Devices.Clear();
+                foreach (var device in devices)
+                {
+                    Devices.Add(new DeviceViewModel(device));
+                }
+            }).ConfigureAwait(false);
         }
 
-        /// <summary>
-        /// 根据最新实体数据刷新单台设备的 UI 状态。
-        /// </summary>
-        public DeviceViewModel UpdateDevice(Device device)
+        private async Task InitializeAsync()
         {
-            if (device == null)
-                throw new ArgumentNullException(nameof(device));
-
-            var existing = Devices.FirstOrDefault(d => d.DeviceId == device.DeviceId);
-            if (existing == null)
-            {
-                existing = new DeviceViewModel(device);
-                Devices.Add(existing);
-            }
-            else
-            {
-                existing.UpdateFromModel();
-            }
-
-            return existing;
+            await LoadDevicesAsync().ConfigureAwait(false);
+            await _deviceManager.InitializeAsync().ConfigureAwait(false);
+            _deviceManager.Start();
         }
+        
+        
+
+        
     }
 }

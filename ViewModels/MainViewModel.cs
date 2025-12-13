@@ -10,6 +10,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace WPF9SimpleMesMonitorSystem.ViewModels
 {
+    /// <summary>
+    /// 主界面 VM：负责系统时钟与导航逻辑，所有页面通过 DI 解析并缓存。
+    /// </summary>
     public partial class MainViewModel : ViewModelBase
     {
         private readonly IServiceProvider _serviceProvider;
