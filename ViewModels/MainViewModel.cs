@@ -27,7 +27,7 @@ namespace WPF9SimpleMesMonitorSystem.ViewModels
 
         public MainViewModel(IServiceProvider serviceProvider)
         {
-            _serviceProvider = serviceProvider;
+            _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
             NavigateCommand = new RelayCommand<string>(OnNavigate);
             //初始化时间定时器
             var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
@@ -37,14 +37,14 @@ namespace WPF9SimpleMesMonitorSystem.ViewModels
             CurrentView = ResolveViewModel<DashboardViewModel>();
         }
 
-        private void OnNavigate(string destination)
+        private void OnNavigate(string? destination)
         {
             CurrentView = destination switch
             {
-                "Dashboard" => new DashboardViewModel(),// 每次创建新实例，或者使用单例缓存
-                "DeviceMonitor" => new DeviceMonitorViewModel(),
-                "Order" => new OrderViewModel(),
-                _ => CurrentView
+                "Dashboard" => ResolveViewModel<DashboardViewModel>(),
+                "DeviceMonitor" => ResolveViewModel<DeviceMonitorViewModel>(),
+                "Order" => ResolveViewModel<OrderViewModel>(),
+                _ => CurrentView??ResolveViewModel<DashboardViewModel>()
             };
         }
 

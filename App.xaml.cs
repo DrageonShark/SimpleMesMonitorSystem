@@ -14,7 +14,6 @@ namespace WPF9SimpleMesMonitorSystem
     public partial class App : Application
     {
         public new static App Current => (App)Application.Current;
-
         /// <summary>
         /// 统一的依赖注入容器（IoC），用于解析 View、ViewModel、服务等实例。
         /// </summary>
