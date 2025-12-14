@@ -17,12 +17,23 @@ namespace WPF9SimpleMesMonitorSystem.Services.Device.States
 
         public void OnTelemetry(DeviceStateContext context, DeviceTelemetrySnapshot snapshot)
         {
-            throw new NotImplementedException();
+            if (snapshot.Temperature > context.HighTemperatureThreshold)
+            {
+                context.RaiseAlarm($"温度过高：{snapshot.Temperature:F1} °C");
+            }
+            if (snapshot.Pressure > context.HighPressureThreshold)
+            {
+                context.RaiseAlarm($"压力异常：{snapshot.Pressure:F1} MPa");
+            }
+            if (snapshot.Speed < context.LowSpeedThreshold)
+            {
+                context.RaiseLog($"转速偏低（{snapshot.Speed} rpm），建议检查负载或供电。");
+            }
         }
 
         public void OnExit(DeviceStateContext context)
         {
-            throw new NotImplementedException();
+            context.RaiseLog("离开运行状态。");
         }
     }
 }
