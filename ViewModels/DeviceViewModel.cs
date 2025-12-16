@@ -1,7 +1,9 @@
 using System;
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using WPF9SimpleMesMonitorSystem.Common.Telemetry;
 using WPF9SimpleMesMonitorSystem.Models;
+using WPF9SimpleMesMonitorSystem.Services.Device.States;
 
 namespace WPF9SimpleMesMonitorSystem.ViewModels
 {
@@ -12,12 +14,18 @@ namespace WPF9SimpleMesMonitorSystem.ViewModels
     {
         public Device Model { get; }
 
+        private readonly DeviceStateContext _stateContext;
+
+        public ObservableCollection<string> EventLogs { get; } = new();
+        public ObservableCollection<string> AlarmMessages { get; } = new();
+
         public DeviceViewModel(Device model)
         {
             Model = model ?? throw new ArgumentNullException(nameof(model));
             PageTitle = model.DeviceName;
             _status = model.Status;
             _lastUpdateTime = model.LastUpdateTime;
+            _stateContext = new DeviceStateContext(model, AppendLog, AppendAlarm);
         }
 
         public int DeviceId => Model.DeviceId;
@@ -63,6 +71,25 @@ namespace WPF9SimpleMesMonitorSystem.ViewModels
             CurrentTemperature = snapshot.Temperature;
             CurrentPressure = snapshot.Pressure;
             CurrentSpeed = snapshot.Speed;
+
+            _stateContext.ApplySnapshot(snapshot);
+        }
+
+        private void AppendLog(string message) => AddMessage(EventLogs, message);
+        private void AppendAlarm(string message) => AddMessage(AlarmMessages, message);
+
+        private static void AddMessage(ObservableCollection<string> target, string message)
+        {
+            if(string.IsNullOrWhiteSpace(message))
+                return;
+            else
+            {
+                var entry = $"{DateTime.Now:HH:mm:ss}£¬{message}";
+                target.Insert(0, entry);
+                if (target.Count > 50)
+                    target.RemoveAt(target.Count - 1);
+                
+            }
         }
     }
 }

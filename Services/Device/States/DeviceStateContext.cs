@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -19,9 +20,12 @@ namespace WPF9SimpleMesMonitorSystem.Services.Device.States
         private readonly Action<string> _alarmAction;
         private IDeviceState _currentState;
 
-        public DeviceStateContext()
+        public DeviceStateContext(Models.Device device, Action<string>? logAction = null, Action<string>? alarmAction = null)
         {
-            
+            Device = device ?? throw new ArgumentNullException(nameof(device));
+            _currentState = _stoppedState;
+            _logAction = logAction ?? (message => Debug.WriteLine(message));
+            _alarmAction = alarmAction ?? (message => Debug.WriteLine(message));
         }
 
         public Models.Device Device { get; }
