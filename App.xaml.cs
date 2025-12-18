@@ -43,15 +43,21 @@ namespace WPF9SimpleMesMonitorSystem
             var services = new ServiceCollection();
 
             // 数据访问工厂参数，可后续改为读取 appsettings.json
-
-
-            //TODO:可改为读取配置文件，这里先写死，方便快速跑通。
-            const string connectionString = "server=localhost;database=MesDb;uid=sa;pwd=123456";
             // ——数据访问层（工厂模式：IDbService -> SqlDbService）——
-            services.AddSingleton<IDbService>(_ => new SqlDbService(connectionString));
+
+            var dbOptions = new DbServiceFactoryOptions()
+            {
+                ProviderType = DatabaseProviderType.SqlServer,
+                ConnectionString = "Server=.;Database=SimpleMES_DB;Trusted_Connection=True;TrustServerCertificate=True;"
+            };
+
+            services.AddSingleton(dbOptions);
+            services.AddSingleton<IDbServiceFactory, DbServiceFactory>();
+            services.AddSingleton<IDbService>(sp => sp.GetRequiredService<IDbServiceFactory>().CreateService());
             //——设备通信层（单例：统一管理所有Modbus设备）——
             services.AddSingleton<DeviceManager>();
             //——ViewModel注册——
+            services.AddSingleton<MainViewModel>();
             services.AddTransient<DashboardViewModel>();
             services.AddTransient<DeviceMonitorViewModel>();
             services.AddTransient<OrderViewModel>();

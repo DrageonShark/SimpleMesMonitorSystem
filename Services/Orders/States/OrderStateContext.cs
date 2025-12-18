@@ -11,7 +11,7 @@ namespace WPF9SimpleMesMonitorSystem.Services.Orders.States
     /// <summary>
     /// 订单状态上下文：协调状态流转与数据库持久化。
     /// </summary>
-    public abstract class OrderStateContext
+    public sealed class OrderStateContext
     {
         private readonly IDbService _dbService;
         private readonly Action<string> _logAction;
@@ -22,7 +22,7 @@ namespace WPF9SimpleMesMonitorSystem.Services.Orders.States
         private IOrderState _currentState;
 
 
-        public OrderStateContext(ProducingOrder order, IDbService dbService, Action<string>? logAction = null)
+        public OrderStateContext(ProductionOrder order, IDbService dbService, Action<string>? logAction = null)
         {
             Order = order ?? throw new ArgumentNullException(nameof(order));
             _dbService = dbService ?? throw new ArgumentNullException(nameof(dbService));
