@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using WPF9SimpleMesMonitorSystem.Models;
 using WPF9SimpleMesMonitorSystem.Services.DAL;
+using WPF9SimpleMesMonitorSystem.Services.Orders;
 using WPF9SimpleMesMonitorSystem.Services.Orders.States;
 
 namespace WPF9SimpleMesMonitorSystem.ViewModels
@@ -19,10 +20,11 @@ namespace WPF9SimpleMesMonitorSystem.ViewModels
     public partial class OrderViewModel : ViewModelBase
     {
 
-        public OrderViewModel(IDbService dbService)
+        public OrderViewModel(IDbService dbService, IOrderBoardSubject orderBoardSubject)
         {
             PageTitle = "订单管理";
             _dbService = dbService ?? throw new ArgumentNullException(nameof(dbService));
+            _orderBoardSubject = orderBoardSubject ?? throw new ArgumentNullException(nameof(orderBoardSubject));
             RefreshCommand = new AsyncRelayCommand(LoadOrdersAsync);
             StartOrderCommand = new AsyncRelayCommand(StartAsync, () => _orderContext?.CanStart ?? false);
             PauseOrderCommand = new AsyncRelayCommand(PauseAsync, () => _orderContext?.CanPause ?? false);
@@ -32,11 +34,12 @@ namespace WPF9SimpleMesMonitorSystem.ViewModels
         }
 
         private readonly IDbService _dbService;
+        private readonly IOrderBoardSubject _orderBoardSubject;
         private OrderStateContext? _orderContext;
 
 
         public ObservableCollection<ProductionOrder> Orders { get; } = new();
-        public ObservableCollection<string>? operationLogs { get; } = new();
+        public ObservableCollection<string> OperationLogs { get; } = new();
         [ObservableProperty] private ProductionOrder? _selectOrder;
 
         public IAsyncRelayCommand RefreshCommand { get; }
@@ -45,7 +48,7 @@ namespace WPF9SimpleMesMonitorSystem.ViewModels
         public IAsyncRelayCommand ResumeOrderCommand { get; }
         public IAsyncRelayCommand CompleteOrderCommand { get; }
 
-        private void OnSelectedOrderChanged(ProductionOrder? value)
+        partial void OnSelectOrderChanged(ProductionOrder? value)
         {
             _orderContext = value == null ? null : new OrderStateContext(value, _dbService, AppendLog);
             RefreshCommandStates();
@@ -80,6 +83,7 @@ namespace WPF9SimpleMesMonitorSystem.ViewModels
                     }
                 }).ConfigureAwait(false);
                 AppendLog("订单列表刷新完成。");
+                await PublishBoardSnapshotAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -98,6 +102,7 @@ namespace WPF9SimpleMesMonitorSystem.ViewModels
             {
                 await _orderContext.StartAsync().ConfigureAwait(false);
                 await RefreshCurrentOrderSnapshotAsync().ConfigureAwait(false);
+                await PublishBoardSnapshotAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -120,6 +125,7 @@ namespace WPF9SimpleMesMonitorSystem.ViewModels
             {
                 await _orderContext.PauseAsync().ConfigureAwait(false);
                 await RefreshCurrentOrderSnapshotAsync().ConfigureAwait(false);
+                await PublishBoardSnapshotAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -142,10 +148,15 @@ namespace WPF9SimpleMesMonitorSystem.ViewModels
             {
                 await _orderContext.ResumeAsync().ConfigureAwait(false);
                 await RefreshCurrentOrderSnapshotAsync().ConfigureAwait(false);
+                await PublishBoardSnapshotAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 AppendLog($"恢复订单失败：{ex.Message}");
+            }
+            finally
+            {
+                RefreshCommandStates();
             }
         }
 
@@ -160,6 +171,7 @@ namespace WPF9SimpleMesMonitorSystem.ViewModels
             {
                 await _orderContext.CompleteAsync().ConfigureAwait(false);
                 await RefreshCurrentOrderSnapshotAsync().ConfigureAwait(false);
+                await PublishBoardSnapshotAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -197,11 +209,25 @@ namespace WPF9SimpleMesMonitorSystem.ViewModels
                         SelectOrder = latest;
                     }
                 }).ConfigureAwait(false);
+                await PublishBoardSnapshotAsync().ConfigureAwait(false);
             }
             catch (Exception ex)
             {
                 AppendLog($"刷新订单状态失败：{ex.Message}");
             }
+        }
+
+        private Task PublishBoardSnapshotAsync()
+        {
+            return RunOnUiThreadAsync(() =>
+            {
+                var pending = Orders.Count(o => o.OrderStatus == (int)OrderStatus.Pending);
+                var producing = Orders.Count(o => o.OrderStatus == (int)OrderStatus.Producing);
+                var paused = Orders.Count(o => o.OrderStatus == (int)OrderStatus.Paused);
+                var completed = Orders.Count(o => o.OrderStatus == (int)OrderStatus.Completed);
+                var snapshot = new OrderBoardSnapshot(pending, producing, paused, completed, DateTime.Now);
+                _orderBoardSubject.Publish(snapshot);
+            });
         }
 
         private static Task RunOnUiThreadAsync(Action action)
@@ -225,11 +251,11 @@ namespace WPF9SimpleMesMonitorSystem.ViewModels
 
             void Insert()
             {
-                var entry = $"{{DateTime.Now:HH:mm:ss}} {{message}}";
-                operationLogs?.Insert(0,entry);
-                if (operationLogs.Count > 100)
+                var entry = $"{DateTime.Now:HH:mm:ss} {message}";
+                OperationLogs.Insert(0,entry);
+                if (OperationLogs.Count > 100)
                 {
-                    operationLogs.RemoveAt(operationLogs.Count - 1);
+                    OperationLogs.RemoveAt(OperationLogs.Count - 1);
                 }
             }
 

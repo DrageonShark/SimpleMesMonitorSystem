@@ -4,6 +4,7 @@ using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using WPF9SimpleMesMonitorSystem.Services.DAL;
 using WPF9SimpleMesMonitorSystem.Services.Device;
+using WPF9SimpleMesMonitorSystem.Services.Orders;
 using WPF9SimpleMesMonitorSystem.ViewModels;
 
 namespace WPF9SimpleMesMonitorSystem
@@ -48,14 +49,17 @@ namespace WPF9SimpleMesMonitorSystem
             var dbOptions = new DbServiceFactoryOptions()
             {
                 ProviderType = DatabaseProviderType.SqlServer,
-                ConnectionString = "Server=.;Database=SimpleMES_DB;Trusted_Connection=True;TrustServerCertificate=True;"
+                ConnectionString = "server=localhost;database=MesDb;uid=sa;pwd=123456"
             };
 
             services.AddSingleton(dbOptions);
             services.AddSingleton<IDbServiceFactory, DbServiceFactory>();
             services.AddSingleton<IDbService>(sp => sp.GetRequiredService<IDbServiceFactory>().CreateService());
+            services.AddSingleton<IDataRepository, DataRepository>();
             //——设备通信层（单例：统一管理所有Modbus设备）——
             services.AddSingleton<DeviceManager>();
+            services.AddSingleton<OrderBoardHub>();
+            services.AddSingleton<IOrderBoardSubject>(sp => sp.GetRequiredService<OrderBoardHub>());
             //——ViewModel注册——
             services.AddSingleton<MainViewModel>();
             services.AddTransient<DashboardViewModel>();

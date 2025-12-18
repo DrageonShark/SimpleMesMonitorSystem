@@ -28,6 +28,8 @@ namespace WPF9SimpleMesMonitorSystem.Services.Device
 
         // 设备数据变化触发事件
         public event EventHandler<DeviceDataEventArgs> DeviceDataUpdated;
+        public event EventHandler<DeviceNotificationEventArgs>? DeviceLogRaised;
+        public event EventHandler<DeviceNotificationEventArgs>? DeviceAlarmRaised;
 
         public DeviceManager(IDbService dbService)
         {
@@ -50,7 +52,9 @@ namespace WPF9SimpleMesMonitorSystem.Services.Device
             _deviceWrappers.Clear();
             foreach (var device in devices)
             {
-                _deviceWrappers.Add(new ModbusDeviceWrapper(device));
+                _deviceWrappers.Add(new ModbusDeviceWrapper(device,
+                    message => RaiseDeviceLog(device, message),
+                    message => RaiseDeviceAlarm(device, message)));
             }
         }
 
@@ -146,6 +150,22 @@ namespace WPF9SimpleMesMonitorSystem.Services.Device
                     Debug.WriteLine($"观察者处理快照失败：{ex.Message}");
                 }
             }
+        }
+
+        private void RaiseDeviceLog(Models.Device device, string message)
+        {
+            if (string.IsNullOrWhiteSpace(message)) return;
+            DeviceLogRaised?.Invoke(this,
+                new DeviceNotificationEventArgs(device.DeviceId, device.DeviceName,
+                    DeviceNotificationType.Log, message, DateTime.Now));
+        }
+
+        private void RaiseDeviceAlarm(Models.Device device, string message)
+        {
+            if (string.IsNullOrWhiteSpace(message)) return;
+            DeviceAlarmRaised?.Invoke(this,
+                new DeviceNotificationEventArgs(device.DeviceId, device.DeviceName,
+                    DeviceNotificationType.Alarm, message, DateTime.Now));
         }
     }
 }
