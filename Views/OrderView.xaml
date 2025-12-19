@@ -1,0 +1,76 @@
+<UserControl x:Class="WPF9SimpleMesMonitorSystem.Views.OrderView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d">
+    <Grid Margin="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0 0 0 12">
+            <Button Content="Refresh" Command="{Binding RefreshCommand}" Width="80" />
+            <Button Content="Start" Command="{Binding StartOrderCommand}" Width="80" />
+            <Button Content="Pause" Command="{Binding PauseOrderCommand}" Width="80" />
+            <Button Content="Resume" Command="{Binding ResumeOrderCommand}" Width="80" />
+            <Button Content="Complete" Command="{Binding CompleteOrderCommand}" Width="80" />
+        </StackPanel>
+
+        <Grid Grid.Row="1" Margin="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="2*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*" />
+                <ColumnDefinition Width="2*" />
+            </Grid.ColumnDefinitions>
+
+            <DataGrid Grid.Row="0" Grid.ColumnSpan="2" AutoGenerateColumns="False" ItemsSource="{Binding Orders}" SelectedItem="{Binding SelectOrder, Mode=TwoWay}" IsReadOnly="True" SelectionMode="Single" Margin="0 0 0 8">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Order" Binding="{Binding OrderNo}" Width="*" />
+                    <DataGridTextColumn Header="Product" Binding="{Binding ProductCode}" Width="*" />
+                    <DataGridTextColumn Header="Plan" Binding="{Binding PlanQty}" Width="*" />
+                    <DataGridTextColumn Header="Completed" Binding="{Binding CompletedQty}" Width="*" />
+                    <DataGridTextColumn Header="Status" Binding="{Binding StatusText}" Width="*" />
+                    <DataGridTextColumn Header="Start" Binding="{Binding StartTime}" Width="*" />
+                    <DataGridTextColumn Header="End" Binding="{Binding EndTime}" Width="*" />
+                    <DataGridTextColumn Header="Created" Binding="{Binding CreateTime}" Width="*" />
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <Border Grid.Row="1" Grid.Column="0" Padding="8" BorderBrush="#DDDDDD" BorderThickness="1" Background="White">
+                <StackPanel>
+                    <TextBlock Text="Operation Logs" FontWeight="SemiBold" Margin="0 0 0 8" />
+                    <ListBox ItemsSource="{Binding OperationLogs}" />
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="1" Grid.Column="1" Padding="8" BorderBrush="#DDDDDD" BorderThickness="1" Background="White">
+                <StackPanel>
+                    <TextBlock Text="Order Detail" FontWeight="SemiBold" Margin="0 0 0 8" />
+                    <StackPanel Orientation="Vertical" DataContext="{Binding SelectOrder}">
+                        <TextBlock Text="Order:" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding OrderNo}" />
+                        <TextBlock Text="Product:" FontWeight="SemiBold" Margin="0 8 0 0" />
+                        <TextBlock Text="{Binding ProductCode}" />
+                        <TextBlock Text="Plan / Completed:" FontWeight="SemiBold" Margin="0 8 0 0" />
+                        <TextBlock>
+                            <Run Text="{Binding PlanQty}" />
+                            <Run Text=" / " />
+                            <Run Text="{Binding CompletedQty}" />
+                        </TextBlock>
+                        <TextBlock Text="Status:" FontWeight="SemiBold" Margin="0 8 0 0" />
+                        <TextBlock Text="{Binding StatusText}" />
+                        <TextBlock Text="Start:" FontWeight="SemiBold" Margin="0 8 0 0" />
+                        <TextBlock Text="{Binding StartTime}" />
+                        <TextBlock Text="End:" FontWeight="SemiBold" Margin="0 8 0 0" />
+                        <TextBlock Text="{Binding EndTime}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

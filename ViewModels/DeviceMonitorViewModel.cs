@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using CommunityToolkit.Mvvm.ComponentModel;
 using WPF9SimpleMesMonitorSystem.Common.Telemetry;
 using WPF9SimpleMesMonitorSystem.Models;
 using WPF9SimpleMesMonitorSystem.Services.DAL;
@@ -20,6 +21,7 @@ namespace WPF9SimpleMesMonitorSystem.ViewModels
 
         //界面设备绑定
         public ObservableCollection<DeviceViewModel> Devices { get; } = new ();
+        [ObservableProperty] private DeviceViewModel? _selectedDevice;
 
         public DeviceMonitorViewModel(DeviceManager deviceManager, IDbService dbService)
         {
@@ -85,6 +87,7 @@ namespace WPF9SimpleMesMonitorSystem.ViewModels
                 {
                     Devices.Add(new DeviceViewModel(device));
                 }
+                SelectedDevice ??= Devices.FirstOrDefault();
             }).ConfigureAwait(false);
         }
 
